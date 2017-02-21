@@ -1,9 +1,23 @@
 #include <stdio.h>
 #include <stdint.h>
-#include <stdlib.h> 
+#include <stdlib.h>
+
+class Image
+{
+	public:
+	uint32_t width;
+	uint32_t height;
+	
+	uint32_t precision; //бит на канал  (8)
+	uint32_t chanals; //количество каналов (3)
+	
+	char *data;
+};
 
 void readJPEG(const char *filename)
 {
+	Image img;
+	
 	FILE *jpegFile = NULL;
 	unsigned char *buffer;
 	uint32_t fileSize;
@@ -79,7 +93,6 @@ void readJPEG(const char *filename)
 			case 0xDB: //DQT — таблица квантования
 			{
 				curPosition++;
-				//printf("hex: %02x %02x\n", buffer[curPosition], buffer[curPosition+1]);
 				uint16_t blockSize = (buffer[curPosition] << 8) | buffer[curPosition+1]; //записать 2 байта в целочисленную переменную
 				printf("DQT block size: %d\n", blockSize);		
 				curPosition += blockSize; //игнорировать блок еомментариев		
@@ -90,6 +103,12 @@ void readJPEG(const char *filename)
 				curPosition++;
 				uint16_t blockSize = (buffer[curPosition] << 8) | buffer[curPosition+1]; //записать 2 байта в целочисленную переменную
 				printf("Baseline DCT block size: %d\n", blockSize);		
+				
+				img.precision = buffer[curPosition+2]; //бит на канал
+				img.height = (buffer[curPosition+3] << 8) | buffer[curPosition+4];
+				img.width = (buffer[curPosition+5] << 8) | buffer[curPosition+6];
+				img.chanals = buffer[curPosition+7];
+				
 				curPosition += blockSize; //игнорировать блок еомментариев		
 				break;			
 			}
@@ -143,6 +162,7 @@ void readJPEG(const char *filename)
 	if(flagSuccess)
 	{
 		printf("[I]: JPEG parsing finished successfully\n");
+		printf("WxH: %dx%d, precision: %d, chanals: %d\n", img.width, img.height, img.precision, img.chanals);
 	}
 	else
 	{
