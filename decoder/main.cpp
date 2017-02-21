@@ -58,22 +58,29 @@ void readJPEG(const char *filename)
 			case 0xFE: //комментарий
 			{
 				curPosition++;
-				uint32_t blockSize = *((uint16_t *)(&buffer[curPosition]));
+				uint16_t blockSize = (buffer[curPosition] << 8) | buffer[curPosition+1]; //записать 2 байта в целочисленную переменную
 				printf("comments block size: %d\n", blockSize);
 				curPosition += blockSize; //игнорировать блок еомментариев
 				break;
 			}
 			case 0xD9: //индикатор конца изображения
-			{				
-				flagSuccess = true;
+			{
+				printf("unexpected end of image\n");
+				//flagSuccess = true;
 				curPosition = fileSize;
 				break;
+			}
+			case 0xDD: //??? рестарт? что это значит?
+			{
+				curPosition+=5; 
+				break; //пропуск
 			}
 			
 			case 0xDB: //DQT — таблица квантования
 			{
 				curPosition++;
-				uint32_t blockSize = *((uint16_t *)(&buffer[curPosition]));
+				//printf("hex: %02x %02x\n", buffer[curPosition], buffer[curPosition+1]);
+				uint16_t blockSize = (buffer[curPosition] << 8) | buffer[curPosition+1]; //записать 2 байта в целочисленную переменную
 				printf("DQT block size: %d\n", blockSize);		
 				curPosition += blockSize; //игнорировать блок еомментариев		
 				break;
@@ -81,7 +88,7 @@ void readJPEG(const char *filename)
 			case 0xC0: //Baseline DCT
 			{
 				curPosition++;
-				uint32_t blockSize = *((uint16_t *)(&buffer[curPosition]));
+				uint16_t blockSize = (buffer[curPosition] << 8) | buffer[curPosition+1]; //записать 2 байта в целочисленную переменную
 				printf("Baseline DCT block size: %d\n", blockSize);		
 				curPosition += blockSize; //игнорировать блок еомментариев		
 				break;			
@@ -89,7 +96,7 @@ void readJPEG(const char *filename)
 			case 0xC4: //DHT (таблица Хаффмана)
 			{
 				curPosition++;
-				uint32_t blockSize = *((uint16_t *)(&buffer[curPosition]));
+				uint16_t blockSize = (buffer[curPosition] << 8) | buffer[curPosition+1]; //записать 2 байта в целочисленную переменную
 				printf("DHT block size: %d\n", blockSize);		
 				curPosition += blockSize; //игнорировать блок еомментариев		
 				break;			
@@ -97,9 +104,23 @@ void readJPEG(const char *filename)
 			case 0xDA: //SOS (Start of Scan)
 			{
 				curPosition++;
-				uint32_t blockSize = *((uint16_t *)(&buffer[curPosition]));
-				printf("Data block size: %d\n", blockSize);		
-				curPosition += blockSize; //игнорировать блок еомментариев		
+				printf("Data block start\n");
+				while(curPosition<fileSize && buffer[curPosition] != 0xD9)
+				{
+					curPosition++;
+				}
+				
+				if(buffer[curPosition] == 0xD9)
+				{
+					flagSuccess = true;
+					curPosition = fileSize;
+				}
+				else
+				{
+					printf("unexpected end of image\n");
+					curPosition = fileSize;					
+				}
+					
 				break;			
 			}
 			case 0xE0:
